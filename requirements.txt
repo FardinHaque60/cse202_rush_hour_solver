@@ -1,0 +1,2 @@
+pillow==12.1.1
+rushcards==0.2.0
