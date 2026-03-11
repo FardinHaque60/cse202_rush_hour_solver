@@ -236,7 +236,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    puzzle = get_puzzle_from_file("rush.txt", args.line)
+    puzzle = get_puzzle_from_file("data/rush.txt", args.line)
     moves = solve_board(puzzle["board"])
 
     print("line:", puzzle["line_number"])

@@ -8,6 +8,13 @@ experiments for solving rush hour tile sliding game
 
 # data
 
-6x6 board data can be found in rush.txt file in shared [drive](https://drive.google.com/file/d/1dq_sIRjapUHlD-Aew8dR5efGbrJ-hQl7/view?usp=sharing). retrieved from: https://www.michaelfogleman.com/rush/
+data is saved in our shared drive, see below links:
 
-nxn board data can be generated with [rushcards](https://pypi.org/project/rushcards/) package.
+- 4x4 boards: [rush_4.txt](https://drive.google.com/file/d/14k6JP1QemqRfYD8sTns2OuVN5NB05YlE/view?usp=sharing)
+- 6x6 boards (no walls): [rush_no_walls](https://drive.google.com/file/d/12GD62-S4LMxW6Z_kt8ckITTpKpr0RP_n/view?usp=sharing)
+- 6x6 boards (with walls): [rush.txt](https://drive.google.com/file/d/1dq_sIRjapUHlD-Aew8dR5efGbrJ-hQl7/view?usp=sharing)
+
+data retrieved from:
+
+- https://www.michaelfogleman.com/rush/
+- https://huggingface.co/datasets/mustafaah/rushhour4x4-eval

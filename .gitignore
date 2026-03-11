@@ -1,5 +1,7 @@
 .DS_Store
-rush.txt
+
+# dataset
+data/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
