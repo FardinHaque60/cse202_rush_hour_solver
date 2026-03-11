@@ -1,7 +1,11 @@
+.DS_Store
+rush.txt
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
 *$py.class
+.python-version
 
 # C extensions
 *.so
