@@ -245,8 +245,7 @@ if __name__ == "__main__":
 
     if moves is None:
         print("no solution found")
-        return
-
-    print("found moves:", len(moves))
-    print("matches data:", len(moves) == puzzle["expected_moves"])
-    print("path:", " ".join(moves))
+    else:
+        print("found moves:", len(moves))
+        print("matches data:", len(moves) == puzzle["expected_moves"])
+        print("path:", " ".join(moves))
