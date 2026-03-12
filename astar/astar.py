@@ -384,22 +384,16 @@ def iter_puzzles(path, start_line, count):
                 yield puzzle
 
 
-def run_single_test(task):
-    puzzle, track_memory, include_path = task
-
-    if track_memory:
-        tracemalloc.start()
+def run_single_test(puzzle):
+    tracemalloc.start()
 
     start_time = time.perf_counter()
-    result = solve_board(puzzle["board"], return_path=include_path)
+    result = solve_board(puzzle["board"], return_path=False)
     runtime = time.perf_counter() - start_time
 
-    if track_memory:
-        _, peak_mem_bytes = tracemalloc.get_traced_memory()
-        tracemalloc.stop()
-        peak_mem_mb = peak_mem_bytes / (1024 * 1024)
-    else:
-        peak_mem_mb = None
+    _, peak_mem_bytes = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+    peak_mem_mb = peak_mem_bytes / (1024 * 1024)
 
     expected_moves = puzzle["expected_moves"]
     found_moves = result["move_count"]
@@ -425,7 +419,6 @@ def run_single_test(task):
         "runtime_sec": runtime,
         "peak_memory_mb": peak_mem_mb,
         "status": status,
-        "path": "" if result["moves"] is None else " ".join(result["moves"]),
     }
 
 
@@ -443,7 +436,6 @@ def write_results_header(writer):
             "Runtime_sec",
             "Peak_Memory_MB",
             "Status",
-            "Path",
         ]
     )
 
@@ -462,39 +454,11 @@ def write_result_row(writer, row):
             row["runtime_sec"],
             row["peak_memory_mb"],
             row["status"],
-            row["path"],
         ]
     )
 
 
-def print_result(row, quiet):
-    if quiet:
-        return
-
-    print("line:", row["line"])
-    print("board:", row["board"])
-    print("board size:", row["board_size"])
-
-    if row["expected_moves"] is not None:
-        print("expected moves:", row["expected_moves"])
-
-    if row["found_moves"] == -1:
-        print("no solution found")
-    else:
-        print("found moves:", row["found_moves"])
-        if row["expected_moves"] is not None:
-            print("matches data:", row["found_moves"] == row["expected_moves"])
-        print("expanded states:", row["expanded_states"])
-        print("generated states:", row["generated_states"])
-        print("frontier peak:", row["frontier_peak"])
-        print("runtime (sec):", row["runtime_sec"])
-        if row["peak_memory_mb"] is not None:
-            print("peak memory (mb):", row["peak_memory_mb"])
-        if row["path"]:
-            print("path:", row["path"])
-
-
-def process_results(results, output_path, quiet, total_count):
+def process_results(results, output_path, total_count):
     processed = 0
     ok_count = 0
     failed_count = 0
@@ -518,12 +482,10 @@ def process_results(results, output_path, quiet, total_count):
             else:
                 mismatch_count += 1
 
-            print_result(row, quiet)
-
             if writer is not None:
                 write_result_row(writer, row)
 
-            if quiet and processed % 100 == 0:
+            if processed % 100 == 0:
                 print("processed {} / {}".format(processed, total_count))
     finally:
         if output_file is not None:
@@ -572,32 +534,13 @@ if __name__ == "__main__":
         default=os.cpu_count() or 1,
         help="number of worker processes to use",
     )
-    parser.add_argument(
-        "--quiet",
-        action="store_true",
-        help="suppress per-puzzle output and only show progress/summary",
-    )
-    parser.add_argument(
-        "--track-memory",
-        action="store_true",
-        help="track peak memory with tracemalloc during each run",
-    )
-    parser.add_argument(
-        "--include-path",
-        action="store_true",
-        help="include the solution path in output",
-    )
     args = parser.parse_args()
-
-    tasks = (
-        (puzzle, args.track_memory, args.include_path)
-        for puzzle in iter_puzzles(args.data, args.line, args.count)
-    )
+    tasks = iter_puzzles(args.data, args.line, args.count)
 
     if args.workers > 1 and args.count > 1:
         with multiprocessing.Pool(processes=args.workers) as pool:
             results = pool.imap_unordered(run_single_test, tasks, chunksize=20)
-            process_results(results, args.output, args.quiet, args.count)
+            process_results(results, args.output, args.count)
     else:
         results = map(run_single_test, tasks)
-        process_results(results, args.output, args.quiet, args.count)
+        process_results(results, args.output, args.count)
