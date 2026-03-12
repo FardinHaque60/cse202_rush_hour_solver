@@ -2,6 +2,8 @@ import argparse
 import heapq
 from math import isqrt
 from itertools import count
+import psutil  # Replaces tracemalloc
+import multiprocessing
 
 
 def normalize_board(board):
@@ -353,7 +355,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--data",
         type=str,
-        default="data/rush.txt",
+        default="data/rush_no_walls.txt",
         help="path to data file",
     )
     parser.add_argument(
