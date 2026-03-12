@@ -7,6 +7,8 @@ import time
 import tracemalloc
 from math import isqrt
 from itertools import count
+import psutil  # Replaces tracemalloc
+import multiprocessing
 
 
 def normalize_board(board):

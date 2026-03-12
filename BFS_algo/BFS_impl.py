@@ -1,8 +1,10 @@
 import time
 import csv
-import tracemalloc
 import multiprocessing
 from collections import deque
+import os
+# import tracemalloc  # Replaces tracemalloc
+import psutil  # Replaces tracemalloc
 
 
 def load_puzzles(filepath: str, size: int):
@@ -43,7 +45,7 @@ def generate_next_states(grid_str: str) -> list[str]:
     for r in range(n):
         for c in range(n):
             ch = grid[r][c]
-            if ch != "o":
+            if ch != "o" and ch != "x":  # 'o' is empty, 'x' is wall:
                 pieces.setdefault(ch, []).append((r, c))
 
     def orientation(cells):
@@ -158,36 +160,54 @@ def bfs_path_to_target(grid_str: str):
     return None, -1, len(parent)
 
 
+import time
+import csv
+import multiprocessing
+from collections import deque
+import os
+import psutil  # Replaces tracemalloc
+
+# ... [Keep your load_puzzles, generate_next_states, and bfs_path_to_target unchanged] ...
+
 def solve_board_task(args):
-    """Worker function for multiprocessing pool."""
+    """Worker function for multiprocessing pool using OS-level memory tracking."""
     idx, board, expected_moves = args
 
-    # Start tracking memory strictly for this worker process
-    tracemalloc.start()
-    start_time = time.perf_counter()
+    # 2. Get the OS-level memory usage for this specific worker process
+    # We do this immediately after the BFS finishes, while the 'parent' 
+    # dictionary and 'q' are still fully loaded in memory.
+    process = psutil.Process(os.getpid())
 
+    baseline_mem_bytes = process.memory_info().rss  # Memory before BFS
+    # tracemalloc.start()  # Start tracing memory allocations
+    start_time = time.perf_counter()
+    
+    # 1. Run the BFS solver
     sol_path, moves_taken, visited_count = bfs_path_to_target(board)
 
     runtime = time.perf_counter() - start_time
+    
+    peak_mem_bytes = process.memory_info().rss  # Memory after BFS
 
-    # Get peak memory used by this task, then stop tracking
-    _, peak_mem_bytes = tracemalloc.get_traced_memory()
-    tracemalloc.stop()
-    peak_mem_mb = peak_mem_bytes / (1024 * 1024)
+    # _, peak_mem_bytes = tracemalloc.get_traced_memory()  # Get current and peak memory usage
+    # tracemalloc.stop()  # Stop tracing memory allocations
+    # peak_mem_mb = peak_mem_bytes / (1024 * 1024)
+    # .rss (Resident Set Size) is the exact amount of physical RAM the process is holding
+    search_mem_bytes = max(0, peak_mem_bytes - baseline_mem_bytes)
+    search_mem_mb = search_mem_bytes / (1024 * 1024)
 
     if sol_path is None:
-        return idx, board, -1, expected_moves, visited_count, runtime, peak_mem_mb, "FAILED (No Solution)"
-
+        return idx, board, -1, expected_moves, visited_count, runtime, search_mem_mb, "FAILED (No Solution)"
+    
     status = "OK" if moves_taken == expected_moves else f"MISMATCH (Got {moves_taken}, Expected {expected_moves})"
-
-    return idx, board, moves_taken, expected_moves, visited_count, runtime, peak_mem_mb, status
-
+    
+    return idx, board, moves_taken, expected_moves, visited_count, runtime, search_mem_mb, status
 
 def main():
-    # Change the filepath and size to test different board sizes
-    filepath = "../data/rush_no_walls.txt"
+    # Change the filepath and size to test the 6x6 boards (e.g. "../data/rush_no_walls.txt", 6)
+    filepath = "../data/rush.txt"
     grid_size = 6
-    output_csv = "bfs_results.csv"
+    output_csv = "bfs_results_python.csv"
 
     try:
         puzzles, expected = load_puzzles(filepath, grid_size)
@@ -217,18 +237,20 @@ def main():
         with multiprocessing.Pool(processes=cpu_cores) as pool:
             for res in pool.imap_unordered(solve_board_task, tasks):
                 idx, board, moves, exp, visited, rt, mem, status = res
-                total_mem += mem
+
                 # Save to CSV
                 writer.writerow([idx, board, moves, exp, visited, rt, mem, status])
-
+                total_mem += mem
+                # Print to console (optional: can comment this out if it's too much terminal spam)
                 print(
                     f"Board {idx:04d} | Moves: {moves:2d} (Exp: {exp:2d}) | Visited: {visited:6d} | Time: {rt:.4f}s | Mem: {mem:.2f} MB | {status}")
 
     total_time = time.time() - start_time
     print(f"\nFinished processing {len(tasks)} boards in {total_time:.2f} seconds.")
-    print(f"Total mem: {total_mem:.2f} MB")
+    print(f"Total search memory usage: {total_mem:.2f} MB")
 
 
 if __name__ == '__main__':
+    # Required for Windows multiprocessing compatibility
     multiprocessing.freeze_support()
     main()
